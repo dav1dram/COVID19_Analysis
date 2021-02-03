@@ -1,0 +1,2 @@
+# COVID19_Analysis
+The goal of this analysis is to answer the following questions using a dataset collected between 01/20/2020-06/01/20:   1. Which countries have had the highest number of deaths due to COVID-19? 2. Which countries have had the highest number of positive cases against the number of tests? 3. Which countries have made the best effort in terms of the number of COVID-19 tests conducted related to their population? 4. Which countries were ultimately the most and least affected related to their population?
