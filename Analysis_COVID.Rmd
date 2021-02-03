@@ -1,0 +1,189 @@
+---
+title: "COVID19_Trend_analysis"
+author: "David Ramirez"
+date: 2/3/2021
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GitHub Documents
+
+The goal of this analysis is to answer the following questions using a dataset collected between 01/20/2020-06/01/20: 
+
+1. Which countries have had the highest number of deaths due to COVID-19?
+2. Which countries have had the highest number of positive cases against the number of tests?
+3. Which countries have made the best effort in terms of the number of COVID-19 tests conducted related to their population?
+4. Which countries were ultimately the most and least affected related to their population?
+
+
+```{r Importing Packages and Libraries}
+install.packages("tidyverse")
+install.packages("tibble")
+library(readr)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r Data Overview}
+covid_df <- read_csv("covid19.csv")
+dim(covid_df)
+vector_cols <- colnames(covid_df)
+glimpse(covid_df)
+```
+
+```{r Data Isolation}
+
+covid_df_all_states <- filter(covid_df, Province_State == "All States")
+
+covid_df_all_states_cummulative <- select(covid_df_all_states,
+                                          Date, 
+                                          Continent_Name, 
+                                          Two_Letter_Country_Code, 
+                                          positive, 
+                                          hospitalized, 
+                                          recovered, 
+                                          death,total_tested
+                                          )
+
+
+covid_df_all_states_daily <- select(covid_df_all_states, 
+                                    Date,
+                                    Country_Region, 
+                                    active,
+                                    hospitalizedCurr,
+                                    daily_tested,
+                                    daily_positive
+                                    )
+
+glimpse(covid_df_all_states_cummulative)
+glimpse(covid_df_all_states_daily)
+
+```
+
+```{r Countries w/ Greatest # of Deaths}
+covid_df_all_states_cumulative_max <- covid_df_all_states_cummulative %>%
+  group_by(Continent_Name,
+           Two_Letter_Country_Code) %>%
+  filter(death>0) %>%
+  summarize(
+    max_death = max(death)
+  ) %>%
+  arrange(-max_death) %>% 
+  head(10)
+
+show(covid_df_all_states_cumulative_max)
+
+
+top_10_plot <- qplot(x=Two_Letter_Country_Code,
+      y=max_death,
+      colour=Continent_Name,
+      data=covid_df_all_states_cumulative_max)
+top_10_plot
+
+
+death_top_3 <- c("United States(US)", "Italy(IT)", "United Kingdom(GB)")
+```
+
+```{r Highest Positive Cases vs. Tested Cases}
+
+covid_df_all_states_daily_sum <- covid_df_all_states_daily %>% 
+  group_by(Country_Region) %>% 
+  summarize(
+    tested = sum(daily_tested), 
+    postitive = sum(daily_positive), 
+    active = sum(active), 
+    hospitalized = sum(hospitalizedCurr)
+  ) %>% 
+  arrange(-tested)
+
+show(covid_df_all_states_daily_sum)
+covid_top_ten <- head(covid_df_all_states_daily_sum, 10)
+
+countries <- covid_top_ten$Country_Region
+tested_cases <- covid_top_ten$tested
+positive_cases <- covid_top_ten$postitive
+active_cases <- covid_top_ten$active
+hospitalized_cases <- covid_top_ten$hospitalized
+
+names(tested_cases) <- countries
+names(positive_cases) <- countries
+names( active_cases)<- countries
+names(hospitalized_cases)<- countries
+
+positive_tested_ratio = positive_cases/tested_cases
+head(positive_tested_ratio,3)
+positive_tested_top_3 <- c("United States"=0.1086, 
+                           "Russia"=0.0385, 
+                           "Italy" = 0.0615)
+
+positive_tested_top_3
+```
+
+
+
+```{r Data Scaling to Pop. }
+#population information retrieved from https://www.worldometers.info/world-population/population-by-country/
+
+covid_mat <- cbind(tested_cases, positive_cases, active_cases, hospitalized_cases)
+population <- c(331002651, 145934462, 60461826, 1380004385, 84339067, 37742154, 67886011, 25499884, 32971854, 37846611)
+
+covid_mat <-covid_mat*100/population
+show(covid_mat)
+
+
+tested_cases_rank <- rank(covid_mat[,"tested_cases"])
+positive_cases_rank <- rank(covid_mat[,"positive_cases"])
+active_cases_rank <-  rank(covid_mat[,"active_cases"])
+hospitalized_cases_rank <-  rank(covid_mat[,"hospitalized_cases"])
+
+covid_mat_rank <- rbind(tested_cases_rank, 
+                        positive_cases_rank, 
+                        active_cases_rank, 
+                        hospitalized_cases_rank)
+covid_mat_rank
+head(covid_mat_rank,1)
+
+```
+
+
+
+```{r Affected countries by rank}
+colSums(covid_mat_rank[-1,])
+
+best_effort_tested_cased_top_3 <- c("India", "United Kingdom", "Turkey")
+most_affected_country <- c("Italy")
+least_affected_country <-  c("India")
+```
+
+
+```{r Analysis Conclusion}
+question_list <- list("Which countries have had the highest number of deaths due to COVID-19?", 
+                      "Which countries have had the highest number of positive cases against the number of tests?", 
+                      "Which countries have made the best effort in terms of the number of COVID-19 tests conducted related to their population?", 
+                      "Which countries were ultimately the most and least affected related to their population?"
+                      )
+
+answer_list <-  list("Countries with the highest Death rate" = death_top_3,
+                     "Countries with the highest Positive tested cases" = positive_tested_top_3,
+                     "The best effort in testing related to the population" = best_effort_tested_cased_top_3,
+                     "The most affected country related to its population" = most_affected_country,
+                     "The least affected country related to its population" = least_affected_country
+                     )
+
+answer_list
+
+
+```
+
+## Including Plots
+
+```{r 10 Highest Death Tolls, echo=FALSE}
+top_10_plot
+
+```
+
+
